@@ -3,7 +3,9 @@ module hdmi_tmds_encoder
     //Basic signals declaration
     input		logic		            clk                     ,   //Basic clk signal
     input		logic		            rst_n                   ,
-    
+
+    //As HDMI is based on DVI standart, it's required to implement control word
+    input		logic		[1 : 0] 	control_command          ,  //[1] - vsync, [0] - hsync
 
     //Input data
     input		logic		            input_stream_valid      ,   // Input stream valid
@@ -20,6 +22,7 @@ module hdmi_tmds_encoder
 //Registering input signals
 logic		                    input_stream_valid_reg  ;   // Input stream valid
 logic		        [7 : 0] 	input_stream_data_reg   ;   // Input stream data (non-encoded 8 bits data)
+logic		        [1 : 0] 	control_word_reg        ;   // Register for the control word
 logic		        [3 : 0] 	input_stream_data_ones  ;   // Calculaitng input number of ones in data
 
 //First stage encoding section
@@ -27,6 +30,7 @@ logic		                    stage_1_valid_enc       ;   // Stage 1 encoded stream
 logic		        [8 : 0] 	stage_1_data_enc        ;   // Stage 1 encoded stream data (combinational encoding signal)
 logic		                    stage_1_valid_reg       ;   // Stage 1 encoded stream valid (registering signal)
 logic		        [8 : 0] 	stage_1_data_reg        ;   // Stage 1 encoded stream data (registering signal)
+logic		        [1 : 0] 	stage_1_control_word    ;   // Register for the control word
 logic		        [3 : 0] 	stage_1_data_ones       ;   // Calculaitng input number of ones in data
 
 //Second stage encoding section
@@ -50,13 +54,14 @@ logic	signed 	    [4 : 0] 	disparity_counter       ;   // Disparity counter for 
 always_ff @(posedge clk)
 begin
     input_stream_valid_reg <= '0;
+    control_word_data_reg <= control_command;
     if(input_stream_valid)
         begin
             input_stream_valid_reg <= '1;
             input_stream_data_reg <= input_stream_data;
             input_stream_data_ones <= 
                                         input_stream_data[0] + input_stream_data[1] + input_stream_data[2] + input_stream_data[3] + 
-                                        input_stream_data[4] + input_stream_data[5] + input_stream_data[6] + input_stream_data[7];
+                                        input_stream_data[4] + input_stream_data[5] + input_stream_data[6] + input_stream_data[7]; 
         end
 end
 //End of latching input data section
@@ -100,6 +105,7 @@ end
 always_ff @(posedge clk)
 begin
     stage_1_valid_reg  <= '0;
+    stage_1_control_word <= control_word_data_reg;
     if (stage_1_valid_enc) begin
         stage_1_valid_reg   <= '1;
         stage_1_data_reg    <= stage_1_data_enc;
@@ -150,6 +156,14 @@ begin
         stage_2_valid_reg   <= '1;
         stage_2_data_reg    <= stage_2_data_enc;
     end
+    else begin
+        case (stage_1_control_word)
+            2'b00 : begin stage_2_data_reg    <= 10'b0010101011;    end
+            2'b01 : begin stage_2_data_reg    <= 10'b0010101010;    end
+            2'b10 : begin stage_2_data_reg    <= 10'b1101010100;    end
+            2'b11 : begin stage_2_data_reg    <= 10'b1101010101;    end
+        endcase
+    end
 end
 //End of second stage encoding section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -166,7 +180,7 @@ begin
     stage_2_data_zeroes = 
                         ~stage_1_data_reg[0] + ~stage_1_data_reg[1] + ~stage_1_data_reg[2] + ~stage_1_data_reg[3] + 
                         ~stage_1_data_reg[4] + ~stage_1_data_reg[5] + ~stage_1_data_reg[6] + ~stage_1_data_reg[7];
-end~
+end
 //End of calculating zeroes and ones in stage 2 encoded data section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -192,12 +206,15 @@ begin
                 end
                 else begin
                     if(((disparity_counter > 0) && (stage_1_data_ones > 4)) || ((disparity_counter < 0) && (stage_1_data_ones < 4))) begin
-                        disparity_counter <= disparity_counter + (stage_2_data_zeroes - stage_2_data_ones);
+                        disparity_counter <= disparity_counter + (stage_2_data_zeroes - stage_2_data_ones) + (2'b10 & ({stage_1_data_reg[8], stage_1_data_reg[8]}));
                     end
                     else begin
-                        disparity_counter <= disparity_counter + (stage_2_data_ones - stage_2_data_zeroes);
+                        disparity_counter <= disparity_counter + (stage_2_data_ones - stage_2_data_zeroes) - (2'b10 & ({~stage_1_data_reg[8], ~stage_1_data_reg[8]}));
                     end
                 end
+            end
+            else begin
+                disparity_counter <= 0;
             end
         end
 end

@@ -19,7 +19,7 @@ logic       [9 : 0] 	output_stream_data      ;
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of instancing dut section
-hdmi_tmds_encoder hdmi_tmds_encoder
+hdmi_tmds_encoder           i_hdmi_tmds_encoder
 (
     //Basic signals declaration
     .clk                     (clk                   ),   //Basic clk signal
@@ -58,6 +58,7 @@ task send_data();
     input_stream_data <= $urandom_range(0, 255);
 
     @(posedge clk);
+    input_stream_valid <= '0;
     while (1) begin
         @(posedge clk);
         if(output_stream_valid) begin
@@ -81,9 +82,20 @@ initial begin
     #100  rst_n =  1;
     @(posedge clk);
 
+    // for (int i = 0; i < 10; i++) begin
+    //     @(posedge  clk);
+    //     input_stream_valid <= '1;
+    //     input_stream_data <= $urandom_range(0, 255);
+    // end
+
+    // @(posedge clk);
+    // input_stream_valid <= '0;
+
     for (int i = 0; i < 10; i++) begin
         send_data();
     end
+    $display(">>>>> Succsess!");
+    $finish();
 end
 //End of generating main scenario section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
