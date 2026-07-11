@@ -53,17 +53,21 @@ module interface_hdmi_transmitter_wrapper
 //Begin of local signals and parameters section
 
 //Front detector
-logic		            v_sync_posedge          ;
-logic		            v_sync_negedge          ;
-logic		            h_sync_posedge          ;
-logic		            h_sync_negedge          ;
+logic		            v_sync_posedge                  ;
+logic		            v_sync_negedge                  ;
+logic		            h_sync_posedge                  ;
+logic		            h_sync_negedge                  ;
 
 //Registering input signals
-logic		            input_color_valid       ;
-logic		[7 : 0] 	input_component_0_r     ;
-logic		[7 : 0] 	input_component_1_r     ;
-logic		[7 : 0] 	input_component_2_r     ;
+logic		            input_color_valid               ;
+logic		[7 : 0] 	input_component_reg     [3]     ;
 
+//Registering encoded signals
+logic		            encoded_color_valid     [3]     ;
+logic		[9 : 0] 	encoded_component       [3]     ;
+logic		            encoded_color_valid_common      ;
+logic		            encoded_color_valid_reg         ;
+logic		[9 : 0] 	encoded_component_reg   [3]     ;
 //End of local signals and parameters section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -108,9 +112,9 @@ begin
     if(v_sync_posedge)
         begin
             input_color_valid   <= '0;
-            input_component_0_r   <= '0;
-            input_component_1_r   <= '0;
-            input_component_2_r   <= '0;
+            for (int i = 0; i < 3; i++) begin
+                input_component_reg[i] <= '0;
+            end
         end
     else
         begin
@@ -119,17 +123,56 @@ begin
                 input_color_valid   <= '1;
 
                 if (!csr_color_component) begin
-                    input_component_0_r   <= stream_bus_data_r    ;
-                    input_component_1_r   <= stream_bus_data_g    ;
-                    input_component_2_r   <= stream_bus_data_b    ;
+                    input_component_reg[0]   <= stream_bus_data_r    ;
+                    input_component_reg[1]   <= stream_bus_data_g    ;
+                    input_component_reg[2]   <= stream_bus_data_b    ;
                 end else begin
-                    input_component_0_r   <= stream_bus_data_Y    ;
-                    input_component_1_r   <= stream_bus_data_Cb   ;
-                    input_component_2_r   <= stream_bus_data_Cr   ;
+                    input_component_reg[0]   <= stream_bus_data_Y    ;
+                    input_component_reg[1]   <= stream_bus_data_Cb   ;
+                    input_component_reg[2]   <= stream_bus_data_Cr   ;
                 end
             end
         end
 end
 //End of latching input signal section
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+//Begin of inserting tmds encoders section
+generate
+    genvar i;
+    for (i = 0; i < 3; i++) begin : gen_tmds_encoder
+        hdmi_tmds_encoder               i_hdmi_tmds_encoder
+        (
+            //Basic signals declaration
+            .clk                        (clk                        ),  //Basic clk signal
+            .rst_n                      (rst_n                      ),
+            
+
+            //Input data
+            .input_stream_valid         (input_color_valid          ),  // Input stream valid
+            .input_stream_data          (input_component_reg[i]     ),  // Input stream data (non-encoded 8 bits data)
+
+            //Output data 
+            .output_stream_valid        (encoded_color_valid[i]     ),  // Output stream valid
+            .output_stream_data         (encoded_component[i]       )   // Output stream data (encoded 10 bits data)
+        );
+    end
+endgenerate
+
+assign encoded_color_valid_common = encoded_color_valid[0] | encoded_color_valid[1] | encoded_color_valid[2];
+
+always_ff @(posedge clk)
+begin
+    encoded_color_valid_reg <= '0;
+    if (encoded_color_valid_common) begin
+        encoded_color_valid_reg <= '1;
+        for (int i = 0; i < 3; i++) begin
+            encoded_component_reg[i] <= encoded_component[i];
+        end
+    end
+end
+//End of inserting tmds encoders section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 endmodule
