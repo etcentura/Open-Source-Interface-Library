@@ -1,8 +1,8 @@
 module uart_transceiver_wrapper
 #
 (
-    parameter		int     MAX_DWIDTH  =	8                   ,   //Width of the bus for: data
-    parameter       int     CSR_WIDTH   =   32                      //Width of the control-setup registers
+    parameter		int     DWIDTH  =	8                               ,   //Width of the bus for: data
+    parameter       int     CSR_WIDTH   =   32                              //Width of the control-setup registers
 )
 
 (
@@ -12,12 +12,12 @@ module uart_transceiver_wrapper
     
     //Input data stream
     input 	logic 	                        input_stream_valid          ,
-    input 	logic 	[MAX_DWIDTH - 1 : 0] 	input_stream_data           ,
+    input 	logic 	[DWIDTH - 1 : 0] 	    input_stream_data           ,
     output 	logic 	                        input_stream_ready          ,
 
     //Output data stream
     output 	logic 	                        output_stream_valid         ,
-    output 	logic 	[MAX_DWIDTH - 1 : 0] 	output_stream_data          ,
+    output 	logic 	[DWIDTH - 1 : 0] 	    output_stream_data          ,
     input 	logic 	                        output_stream_ready         ,
 
     //UART interface
@@ -29,9 +29,7 @@ module uart_transceiver_wrapper
     //Setup inputs
     input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_setup_register          ,
     input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_clk_divider_tx          ,
-    input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_bits_to_send_tx         ,
     input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_clk_divider_rx          ,
-    input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_bits_to_send_rx         ,
 
     //Status outputs
     output 	logic 	                        status_max_bits_error_tx    ,
@@ -51,7 +49,7 @@ While setting up the parity bit it's considered that:
 2 - even - regular even parity bit is used
 3 - mark - parity bit always equals 1
 4 - space - parity bit always equals 0
->4 - prohibited value - calls status_parity_bit_error_*
+>4 - prohibited value - calls status_parity_bit_error_* and use parity none
 */
 
 //Table of odd and even parity bits
@@ -72,7 +70,7 @@ The number of stop bits defined as
 0 - 1 stop bit
 1 - 1.5 stop bits
 2 - 2 stop bits
-3 - prohibited value - calls status_stop_bit_error_*
+3 - prohibited value - calls status_stop_bit_error_* and use 1 stop bit
 */
 
 //End of notes section
@@ -82,11 +80,13 @@ The number of stop bits defined as
 //Begin of declaring local signals and parameters section
 
 //CSR setup bits
-logic 	                        use_resync_rst          ;     //csr_setup_register[0]   : 1 - use resync, 0 - use non resync
-logic   [2 : 0]                 use_parity_tx           ;     //csr_setup_register[3:1] : go to notes section
-logic   [2 : 0]                 use_parity_rx           ;     //csr_setup_register[6:4] : go to notes section
-logic   [1 : 0]                 number_of_stop_bits_tx  ;     //csr_setup_register[8:7] : go to notes section
-logic   [1 : 0]                 number_of_stop_bits_rx  ;     //csr_setup_register[10:9]: go to notes section
+logic 	                        use_resync_rst          ;     //csr_setup_register[0]       : 1 - use resync, 0 - use non resync
+logic   [2 : 0]                 use_parity_tx           ;     //csr_setup_register[3:1]     : go to notes section
+logic   [2 : 0]                 use_parity_rx           ;     //csr_setup_register[6:4]     : go to notes section
+logic   [1 : 0]                 number_of_stop_bits_tx  ;     //csr_setup_register[8:7]     : go to notes section
+logic   [1 : 0]                 number_of_stop_bits_rx  ;     //csr_setup_register[10:9]    : go to notes section
+logic 	                        use_cts_on_tx           ;     //csr_setup_register[11]      : 1 - use cts signal, 0 - dont use
+logic 	                        use_rts_on_rx           ;     //csr_setup_register[12]      : 1 - use rts signal, 0 - dont use
 
 
 //RST resync
@@ -102,11 +102,23 @@ logic 	                        clk_div_clock_tx        ;
 logic 	[CSR_WIDTH - 1 : 0] 	clk_div_counter_rx      ;
 logic 	                        clk_div_clock_rx        ;
 
-//TX section
-logic 	                        uart_tx_valid_resync    ;
-logic 	                        uart_tx_ready_resync    ;
-
 //End of declaring local signals and parameters section
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+//Begin of getting CSR register signals section
+always_comb
+begin
+    use_resync_rst          = csr_setup_register[0]     ;
+    use_parity_tx           = csr_setup_register[3:1]   ;
+    use_parity_rx           = csr_setup_register[6:4]   ;
+    number_of_stop_bits_tx  = csr_setup_register[8:7]   ;
+    number_of_stop_bits_rx  = csr_setup_register[10:9]  ;
+    use_cts_on_tx           = csr_setup_register[11]    ;
+    use_rts_on_rx           = csr_setup_register[12]    ;
+end
+
+//End of getting CSR register signals section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -144,7 +156,6 @@ signal_synchronizer
     .data_dst               (resync_reset_rx            )
 );
 
-assign use_resync_rst = csr_setup_register[0];
 assign no_resync_reset = rst_n;
 assign internal_reset_tx = use_resync_rst ? resync_reset_tx : no_resync_reset;
 assign internal_reset_rx = use_resync_rst ? resync_reset_rx : no_resync_reset;
@@ -191,66 +202,32 @@ end
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of declaring uart tx section section
-
-signal_synchronizer 
+uart_tx_wrapper 
 #
 (
-    .SYNCWIDTH		        (1                          ),
-    .SYNCSTEPS		        (2                          )
-)
-                            i_signal_synchronizer_tx_valid
-(
-    //Basic signals declaration
-    .clk_src                (clk                        ),
-    .clk_dst                (clk_div_clock_tx           ),
-
-    .data_src               (input_stream_valid         ),
-    .data_dst               (uart_tx_valid_resync       )
-);
-
-signal_synchronizer 
-#
-(
-    .SYNCWIDTH		        (1                          ),
-    .SYNCSTEPS		        (2                          )
-)
-                            i_signal_synchronizer_tx_ready
-(
-    //Basic signals declaration
-    .clk_src                (clk_div_clock_rx           ),
-    .clk_dst                (clk                        ),
-
-    .data_src               (uart_tx_ready_resync       ),
-    .data_dst               (input_stream_ready         )
-);
-
-uart_transceiver_wrapper 
-#
-(
-    .MAX_DWIDTH             (MAX_DWIDTH                 ),      //Width of the bus for: data
+    .DWIDTH                 (DWIDTH                     ),      //Width of the bus for: data
     .CSR_WIDTH              (CSR_WIDTH                  )       //Width of the control-setup registers
 )
-                            i_uart_transceiver_wrapper
+                            i_uart_tx_wrapper
 (
     //Basic signals declaration
     .clk                    (clk_div_clock_tx           ),
     .rst_n                  (internal_reset_tx          ),
     
     //Input data stream
-    .input_stream_valid     (uart_tx_valid_resync       ),
+    .input_stream_valid     (input_stream_valid         ),
     .input_stream_data      (input_stream_data          ),
-    .input_stream_ready     (uart_tx_ready_resync       ),
+    .input_stream_ready     (input_stream_ready         ),
 
     //UART interface
     .uart_tx                (uart_tx                    ),
     .uart_cts               (uart_cts                   ),
 
     //Setup inputs
+    .use_cts_on_tx          (use_cts_on_tx              ),
     .use_parity_tx          (use_parity_tx              ),
-    .number_of_stop_bits_tx (number_of_stop_bits_tx     ),
-    .csr_bits_to_send_tx    (csr_bits_to_send_tx        )
+    .number_of_stop_bits_tx (number_of_stop_bits_tx     )
 );
-
 //End of declaring uart tx section section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -259,7 +236,7 @@ uart_transceiver_wrapper
 uart_rx_wraper 
 #
 (
-    .MAX_DWIDTH             (MAX_DWIDTH                 ),      //Width of the bus for: data
+    .DWIDTH                 (DWIDTH                     ),      //Width of the bus for: data
     .CSR_WIDTH              (CSR_WIDTH                  )       //Width of the control-setup registers
 )
                             i_uart_rx_wraper
@@ -269,9 +246,9 @@ uart_rx_wraper
     .rst_n                  (internal_reset_rx          ),
     
     //Input data stream
-    .output_stream_valid    ()   ,
-    .output_stream_data     ()   ,
-    .output_stream_ready    ()   ,
+    .output_stream_valid    (output_stream_valid        ),
+    ю.output_stream_data    (output_stream_data         ),
+    .output_stream_ready    (output_stream_ready        ),
 
     //UART interface
     .uart_rx                (uart_rx                    ),
@@ -279,8 +256,7 @@ uart_rx_wraper
 
     //Setup inputs
     .use_parity_rx          (use_parity_rx              ),
-    .number_of_stop_bits_rx (number_of_stop_bits_rx     ),
-    .csr_bits_to_send_rx    (csr_bits_to_send_rx        )
+    .number_of_stop_bits_rx (number_of_stop_bits_rx     )
 );
 //End of declaring uart rx section section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -290,12 +266,12 @@ uart_rx_wraper
 always_comb
 begin
     status_max_bits_error_tx = '0;
-    if(csr_bits_to_send_tx > MAX_DWIDTH) begin
+    if(csr_bits_to_send_tx > DWIDTH) begin
         status_max_bits_error_tx = '1;
     end
 
     status_max_bits_error_rx = '0;
-    if(csr_bits_to_send_rx > MAX_DWIDTH) begin
+    if(csr_bits_to_send_rx > DWIDTH) begin
         status_max_bits_error_rx = '1;
     end
 
