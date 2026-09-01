@@ -18,7 +18,6 @@ module uart_transceiver_wrapper
     //Output data stream
     output 	logic 	                        output_stream_valid         ,
     output 	logic 	[DWIDTH - 1 : 0] 	    output_stream_data          ,
-    input 	logic 	                        output_stream_ready         ,
 
     //UART interface
     input 	logic 	                        uart_rx                     ,
@@ -32,12 +31,9 @@ module uart_transceiver_wrapper
     input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_clk_divider_rx          ,
 
     //Status outputs
-    output 	logic 	                        status_max_bits_error_tx    ,
-    output 	logic 	                        status_max_bits_error_rx    ,
     output 	logic 	                        status_parity_bit_error_tx  ,
     output 	logic 	                        status_parity_bit_error_rx  ,
-    output 	logic 	                        status_stop_bit_error_tx    ,
-    output 	logic 	                        status_stop_bit_error_rx    ,
+    output 	logic 	                        status_stop_bit_error_tx    
 );
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of notes section
@@ -84,9 +80,7 @@ logic 	                        use_resync_rst          ;     //csr_setup_registe
 logic   [2 : 0]                 use_parity_tx           ;     //csr_setup_register[3:1]     : go to notes section
 logic   [2 : 0]                 use_parity_rx           ;     //csr_setup_register[6:4]     : go to notes section
 logic   [1 : 0]                 number_of_stop_bits_tx  ;     //csr_setup_register[8:7]     : go to notes section
-logic   [1 : 0]                 number_of_stop_bits_rx  ;     //csr_setup_register[10:9]    : go to notes section
-logic 	                        use_cts_on_tx           ;     //csr_setup_register[11]      : 1 - use cts signal, 0 - dont use
-logic 	                        use_rts_on_rx           ;     //csr_setup_register[12]      : 1 - use rts signal, 0 - dont use
+logic 	                        use_cts_on_tx           ;     //csr_setup_register[9]       : 1 - use cts signal, 0 - dont use
 
 
 //RST resync
@@ -111,9 +105,7 @@ begin
     use_parity_tx           = csr_setup_register[3:1]   ;
     use_parity_rx           = csr_setup_register[6:4]   ;
     number_of_stop_bits_tx  = csr_setup_register[8:7]   ;
-    number_of_stop_bits_rx  = csr_setup_register[10:9]  ;
-    use_cts_on_tx           = csr_setup_register[11]    ;
-    use_rts_on_rx           = csr_setup_register[12]    ;
+    use_cts_on_tx           = csr_setup_register[9]     ;
 end
 
 //End of getting CSR register signals section
@@ -233,16 +225,14 @@ uart_rx_wraper
     //Input data stream
     .output_stream_valid    (output_stream_valid        ),
     .output_stream_data     (output_stream_data         ),
-    .output_stream_ready    (output_stream_ready        ),
 
     //UART interface
     .uart_rx                (uart_rx                    ),
     .uart_rts               (uart_rts                   ),
 
     //Setup inputs
-    .use_rts_on_rx          (use_rts_on_rx              ),
-    .use_parity_rx          (use_parity_rx              ),
-    .number_of_stop_bits_rx (number_of_stop_bits_rx     ),
+    .csr_clk_divider_rx     (csr_clk_divider_rx         ),
+    .use_parity_rx          (use_parity_rx              )
 );
 //End of declaring uart rx section section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -251,16 +241,6 @@ uart_rx_wraper
 //Begin of driving status errors section
 always_comb
 begin
-    status_max_bits_error_tx = '0;
-    if(csr_bits_to_send_tx > DWIDTH) begin
-        status_max_bits_error_tx = '1;
-    end
-
-    status_max_bits_error_rx = '0;
-    if(csr_bits_to_send_rx > DWIDTH) begin
-        status_max_bits_error_rx = '1;
-    end
-
     status_parity_bit_error_tx = '0;
     if(use_parity_tx > 4)begin
         status_parity_bit_error_tx = '1;
@@ -274,11 +254,6 @@ begin
     status_stop_bit_error_tx = '0;
     if(number_of_stop_bits_tx)begin
         status_stop_bit_error_tx = '1;
-    end
-
-    status_stop_bit_error_rx = '0;
-    if(number_of_stop_bits_rx)begin
-        status_stop_bit_error_rx = '1;
     end
 end
 //End of driving status errors section
