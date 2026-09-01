@@ -2,7 +2,7 @@ module uart_tx_data_manager
 #
 (
     parameter		int     DWIDTH              =	8       ,   //Width of the bus for: data
-    parameter       int     CSR_WIDTH           =   32      ,   //Width of the control-setup registers
+    parameter       int     CSR_WIDTH           =   32          //Width of the control-setup registers
 )
 
 (
@@ -96,7 +96,7 @@ begin
         SEND_DATA:
             begin
                 next_state = SEND_DATA;
-                if() begin
+                if(uart_valid && uart_ready) begin
                     next_state = IDLE;
                 end
             end

@@ -155,9 +155,9 @@ assign internal_reset_rx = use_resync_rst ? resync_reset_rx : no_resync_reset;
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of clk divider section
-always_ff @(posedge clk or negedge internal_reset)
+always_ff @(posedge clk or negedge internal_reset_tx)
 begin
-    if(!internal_reset)
+    if(!internal_reset_tx)
         begin
             clk_div_counter_tx <= '0;
             clk_div_clock_tx <= '0;
