@@ -20,8 +20,16 @@ module uart_rx_wraper
     output 	logic 	                        uart_rts                    ,
 
     //Setup inputs
+    input   logic                           use_rts_on_rx               ,
     input   logic   [2 : 0]                 use_parity_rx               ,
-    input   logic   [1 : 0]                 number_of_stop_bits_rx      ,
-    input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_bits_to_send_rx         
+    input   logic   [1 : 0]                 number_of_stop_bits_rx      
 );
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+//Begin of name section
+
+
+
+//End of name section
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 endmodule

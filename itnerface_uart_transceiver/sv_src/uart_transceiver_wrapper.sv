@@ -99,8 +99,6 @@ logic 	                        internal_reset_rx       ;
 //CLK dividing signals
 logic 	[CSR_WIDTH - 1 : 0] 	clk_div_counter_tx      ;
 logic 	                        clk_div_clock_tx        ;
-logic 	[CSR_WIDTH - 1 : 0] 	clk_div_counter_rx      ;
-logic 	                        clk_div_clock_rx        ;
 
 //End of declaring local signals and parameters section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -150,7 +148,7 @@ signal_synchronizer
 (
     //Basic signals declaration
     .clk_src                (clk                        ),
-    .clk_dst                (clk_div_clock_rx           ),
+    .clk_dst                (clk                        ),
 
     .data_src               (rst_n                      ),
     .data_dst               (resync_reset_rx            )
@@ -171,9 +169,6 @@ begin
         begin
             clk_div_counter_tx <= '0;
             clk_div_clock_tx <= '0;
-
-            clk_div_counter_rx <= '0;
-            clk_div_clock_rx <= '0;
         end
     else
         begin
@@ -184,16 +179,6 @@ begin
             end
             else begin
                 clk_div_counter_tx <= clk_div_counter_tx + 1;
-            end
-
-
-            //RX clock
-            if(clk_div_counter_rx == csr_clk_divider_tx - 1)begin
-                clk_div_counter_rx <= '0;
-                clk_div_clock_rx <= ~clk_div_clock_rx;
-            end
-            else begin
-                clk_div_counter_rx <= clk_div_counter_rx + 1;
             end
         end
 end
@@ -242,12 +227,12 @@ uart_rx_wraper
                             i_uart_rx_wraper
 (
     //Basic signals declaration
-    .clk                    (clk_div_clock_tx           ),
+    .clk                    (clk                        ),
     .rst_n                  (internal_reset_rx          ),
     
     //Input data stream
     .output_stream_valid    (output_stream_valid        ),
-    ю.output_stream_data    (output_stream_data         ),
+    .output_stream_data     (output_stream_data         ),
     .output_stream_ready    (output_stream_ready        ),
 
     //UART interface
@@ -255,8 +240,9 @@ uart_rx_wraper
     .uart_rts               (uart_rts                   ),
 
     //Setup inputs
+    .use_rts_on_rx          (use_rts_on_rx              ),
     .use_parity_rx          (use_parity_rx              ),
-    .number_of_stop_bits_rx (number_of_stop_bits_rx     )
+    .number_of_stop_bits_rx (number_of_stop_bits_rx     ),
 );
 //End of declaring uart rx section section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
