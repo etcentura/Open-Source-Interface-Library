@@ -64,6 +64,8 @@ logic 	                    manage_uart_valid       ;
 logic 	                    manage_uart_ready       ;
 logic 	[DWIDTH-1:0] 	    manage_uart_data        ;
 
+logic 	                    status_busy_tx          ;
+
 //End of declaring local singals and parameters section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -174,7 +176,8 @@ uart_transceiver_wrapper
     //Status outputs
     .status_parity_bit_error_tx             (status_parity_bit_error_tx     ),
     .status_parity_bit_error_rx             (status_parity_bit_error_rx     ),
-    .status_stop_bit_error_tx               (status_stop_bit_error_tx       ) 
+    .status_stop_bit_error_tx               (status_stop_bit_error_tx       ),
+    .status_busy_tx                         (status_busy_tx                 )
 );
 //End of instancing uart tx and rx wrapper section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -197,11 +200,14 @@ uart_tx_data_manager
     .fifo_valid                             (manage_fifo_valid              ),
     .fifo_data                              (manage_fifo_data               ),
     .fifo_read_req                          (manage_fifo_read_req           ),
+    .fifo_empty                             (empty_tx_fifo                  ),
 
     //Data to uart
     .uart_ready                             (manage_uart_ready              ),
     .uart_valid                             (manage_uart_valid              ),
-    .uart_data                              (manage_uart_data               ) 
+    .uart_data                              (manage_uart_data               ),
+
+    .status_busy_tx                         (status_busy_tx                 )
 );
 
 //End of instancing tx data fifo manager section

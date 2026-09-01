@@ -19,7 +19,9 @@ module uart_tx_data_manager
     //Data to uart
     input 	logic 	                uart_ready      ,
     output 	logic 	                uart_valid      ,
-    output 	logic 	[DWIDTH-1:0] 	uart_data       
+    output 	logic 	[DWIDTH-1:0] 	uart_data       ,
+
+    input 	logic 	                status_busy_tx
 );
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -32,12 +34,37 @@ logic 	                    rst_sync;
 enum 	logic 	[3:0]   {
                             IDLE, 
                             GET_DATA, 
-                            SEND_DATA
+                            SEND_DATA,
+                            WAIT_TX_BUSY
                         } 	
                             state, next_state, prev_state;
 
 
 //End of declaring local signals and parameters section
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+//Begin of front detector section
+logic 	status_busy_tx_reg;
+logic 	status_busy_tx_pos;
+logic 	status_busy_tx_neg;
+
+always_ff @(posedge clk or negedge rst_n)
+begin
+    if(!rst_n)
+        begin
+            status_busy_tx_reg <= '0;
+        end
+    else
+        begin
+            status_busy_tx_reg <= status_busy_tx;
+        end
+end
+
+assign 	status_busy_tx_pos 	= ~status_busy_tx_reg & status_busy_tx;
+assign 	status_busy_tx_neg 	= status_busy_tx_reg & ~status_busy_tx;
+
+//End of front detector section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -97,6 +124,13 @@ begin
             begin
                 next_state = SEND_DATA;
                 if(uart_valid && uart_ready) begin
+                    next_state = WAIT_TX_BUSY;
+                end
+            end
+        WAIT_TX_BUSY:
+            begin
+                next_state = WAIT_TX_BUSY;
+                if(!status_busy_tx) begin
                     next_state = IDLE;
                 end
             end

@@ -135,7 +135,10 @@ begin
     else
         begin
             if((is_receiving) && (counter_for_ticks == csr_clk_divider_rx - 1))begin
-                data_shift_register_input <= {data_shift_register_input, uart_rx};
+                data_shift_register_input <= {uart_rx, data_shift_register_input[DWIDTH:1]};
+            end
+            else if(output_stream_valid) begin
+                data_shift_register_input <= '0;
             end
         end
 end
@@ -167,8 +170,8 @@ always_comb
 begin
     
     case (use_parity_rx)
-        1:          calc_parity_bit = ~(^data_shift_register_check[DWIDTH:1]);
-        2:          calc_parity_bit = ^data_shift_register_check[DWIDTH:1];
+        1:          calc_parity_bit = ~(^data_shift_register_check[DWIDTH-1:0]);
+        2:          calc_parity_bit = ^data_shift_register_check[DWIDTH-1:0];
         3:          calc_parity_bit = '1;
         4:          calc_parity_bit = '0;
         default:    calc_parity_bit = '0;
@@ -184,9 +187,9 @@ begin
         end
     else
         begin
-            if((valid_shift_register_check) && (calc_parity_bit == data_shift_register_check[0])) begin
+            if((valid_shift_register_check) && (calc_parity_bit == data_shift_register_check[DWIDTH])) begin
                 output_stream_valid <= '1;
-                output_stream_data  <= data_shift_register_check[DWIDTH:1];
+                output_stream_data  <= data_shift_register_check[DWIDTH-1:0];
             end
             else begin
                 output_stream_valid <= '0;
@@ -202,4 +205,5 @@ end
 assign use_rts_on_rx = '0;
 //End of driving use_rts_on_rx section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 endmodule

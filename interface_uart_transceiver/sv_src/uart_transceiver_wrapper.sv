@@ -33,7 +33,8 @@ module uart_transceiver_wrapper
     //Status outputs
     output 	logic 	                        status_parity_bit_error_tx  ,
     output 	logic 	                        status_parity_bit_error_rx  ,
-    output 	logic 	                        status_stop_bit_error_tx    
+    output 	logic 	                        status_stop_bit_error_tx    ,
+    output 	logic 	                        status_busy_tx
 );
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of notes section
@@ -68,6 +69,9 @@ The number of stop bits defined as
 2 - 2 stop bits
 3 - prohibited value - calls status_stop_bit_error_* and use 1 stop bit
 */
+
+//The formula for the clk division is
+//f_in/f_out = 2N, where N is the value in csr_clk_divider_* register
 
 //End of notes section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -123,7 +127,7 @@ signal_synchronizer
 (
     //Basic signals declaration
     .clk_src                (clk                        ),
-    .clk_dst                (clk_div_clock_tx           ),
+    .clk_dst                (clk                        ),
 
     .data_src               (rst_n                      ),
     .data_dst               (resync_reset_tx            )
@@ -203,7 +207,8 @@ uart_tx_wrapper
     //Setup inputs
     .use_cts_on_tx          (use_cts_on_tx              ),
     .use_parity_tx          (use_parity_tx              ),
-    .number_of_stop_bits_tx (number_of_stop_bits_tx     )
+    .number_of_stop_bits_tx (number_of_stop_bits_tx     ),
+    .status_busy            (status_busy_tx             )
 );
 //End of declaring uart tx section section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

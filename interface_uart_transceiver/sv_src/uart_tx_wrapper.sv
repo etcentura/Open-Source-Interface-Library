@@ -22,7 +22,10 @@ module uart_tx_wrapper
     //Setup inputs
     input 	logic 	                        use_cts_on_tx               ,
     input   logic   [2 : 0]                 use_parity_tx               ,
-    input   logic   [1 : 0]                 number_of_stop_bits_tx      
+    input   logic   [1 : 0]                 number_of_stop_bits_tx      ,
+
+    //Status flag for manager
+    output 	logic 	                        status_busy                        
 );
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -175,20 +178,11 @@ begin
     else
         begin
             if(state == GET_DATA)begin
-                if(input_stream_ready)begin
-                    if(use_cts_on_tx)begin
-                        if(!cts_resync)begin
-                            data_shift_register <= input_stream_data;
-                        end
-                    end
-                    else begin
-                        data_shift_register <= input_stream_data;
-                    end
-                end
+                data_shift_register <= input_stream_data;
             end
             else if(state == SEND_DATA)begin
                 if(send_counter >= 1)begin
-                    data_shift_register <= {1'b1, data_shift_register[DWIDTH-2:0]};
+                    data_shift_register <= {1'b1, data_shift_register[DWIDTH-1:1]};
                 end
             end
         end
@@ -267,5 +261,19 @@ begin
         end
 end
 //End of driving output data section
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+//Begin of busy status driving section
+always_ff @(posedge clk)
+begin
+    if(state == IDLE) begin
+        status_busy <= '0;
+    end
+    else begin
+        status_busy <= '1;
+    end
+end
+//End of busy status driving section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 endmodule
