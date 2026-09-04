@@ -279,6 +279,7 @@ uart_wrapper
     .csr_setup_register             (csr_setup_register                             ),
     .csr_clk_divider_tx             (csr_clk_divider_tx                             ),
     .csr_clk_divider_rx             (csr_clk_divider_rx                             ),
+    .csr_additional_delay           (100                                            ),
 
     //Status outputs
     .status_parity_bit_error_tx     (                                               ),

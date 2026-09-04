@@ -40,6 +40,7 @@ module uart_wrapper
     input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_setup_register          ,
     input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_clk_divider_tx          ,
     input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_clk_divider_rx          ,
+    input 	logic 	[CSR_WIDTH - 1 : 0] 	csr_additional_delay        ,
 
     //Status outputs
     output 	logic 	                        status_parity_bit_error_tx  ,
@@ -172,6 +173,7 @@ uart_transceiver_wrapper
     .csr_setup_register                     (csr_setup_register             ),
     .csr_clk_divider_tx                     (csr_clk_divider_tx             ),
     .csr_clk_divider_rx                     (csr_clk_divider_rx             ),
+    .csr_additional_delay                   (csr_additional_delay           ),
 
     //Status outputs
     .status_parity_bit_error_tx             (status_parity_bit_error_tx     ),

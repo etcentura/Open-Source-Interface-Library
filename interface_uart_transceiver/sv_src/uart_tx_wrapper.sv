@@ -23,6 +23,7 @@ module uart_tx_wrapper
     input 	logic 	                        use_cts_on_tx               ,
     input   logic   [2 : 0]                 use_parity_tx               ,
     input   logic   [1 : 0]                 number_of_stop_bits_tx      ,
+    input   logic   [CSR_WIDTH - 1 : 0]     csr_additional_delay        ,
 
     //Status flag for manager
     output 	logic 	                        status_busy                        
@@ -38,7 +39,8 @@ logic           cts_resync;
 enum 	logic 	[7:0] 	                {
                                             IDLE, 
                                             GET_DATA, 
-                                            SEND_DATA
+                                            SEND_DATA,
+                                            WAIT
                                         } 	
                                         state, next_state;
 
@@ -47,6 +49,7 @@ logic 	        [DWIDTH - 1 : 0]        data_shift_register;
 logic 	                                data_parity_bit;
 logic 	        [CSR_WIDTH - 1 : 0] 	send_counter;
 logic 	        [CSR_WIDTH - 1 : 0] 	number_of_stops;
+logic 	        [CSR_WIDTH - 1 : 0] 	delay_counter;
 
 //End of declaring local singals and parameters section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -124,6 +127,13 @@ begin
             begin
                 next_state = SEND_DATA;
                 if(send_counter >= 1 + DWIDTH + number_of_stops)begin
+                    next_state = WAIT;
+                end
+            end
+        WAIT:
+            begin
+                next_state = WAIT;
+                if(delay_counter >= csr_additional_delay)begin
                     next_state = IDLE;
                 end
             end
@@ -134,6 +144,27 @@ begin
     endcase
 end
 //End of fsm to control the flow section
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+//Begin of delay counter driving section
+always_ff @(posedge clk)
+begin
+    if(!rst_n)
+        begin
+            delay_counter <= '0;
+        end
+    else
+        begin
+            if(state == WAIT) begin
+                delay_counter <= delay_counter + 1;
+            end
+            else begin
+                delay_counter <= '0;
+            end
+        end
+end
+//End of delay counter driving section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
