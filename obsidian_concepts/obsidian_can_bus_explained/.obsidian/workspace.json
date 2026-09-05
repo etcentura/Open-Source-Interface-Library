@@ -1,0 +1,207 @@
+{
+  "main": {
+    "id": "654ef99dc38f5ed6",
+    "type": "split",
+    "children": [
+      {
+        "id": "31a2618c79e4eb1e",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "08ba0487b1e919bb",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "can_bus_concepts.excalidraw.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "can_bus_concepts.excalidraw"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "e4b104f548c825e0",
+    "type": "split",
+    "children": [
+      {
+        "id": "8be49b24cfd9100d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "7bbfec85ffe3dab0",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Файловый менеджер"
+            }
+          },
+          {
+            "id": "faee19f8a93ee975",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Поиск"
+            }
+          },
+          {
+            "id": "9d7c73977de0ca1c",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Закладки"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "right": {
+    "id": "0c4324d0cd9a9505",
+    "type": "split",
+    "children": [
+      {
+        "id": "cff6ce3aba5515da",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "24a7ce88e06b8091",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "can_bus_concepts.excalidraw.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Обратные ссылки"
+            }
+          },
+          {
+            "id": "8c2161313b0567e8",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "can_bus_concepts.excalidraw.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Исходящие ссылки"
+            }
+          },
+          {
+            "id": "9ec6c3b3b9263720",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Теги"
+            }
+          },
+          {
+            "id": "9588eb2e7af5e227",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Все свойства"
+            }
+          },
+          {
+            "id": "0e95c572f4848909",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "can_bus_concepts.excalidraw.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Структура"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Меню быстрого перехода": false,
+      "graph:Граф": false,
+      "canvas:Создать новый холст": false,
+      "daily-notes:Сегодняшняя заметка": false,
+      "templates:Вставить шаблон": false,
+      "command-palette:Открыть палитру команд": false,
+      "bases:Создать новую базу": false,
+      "obsidian-excalidraw-plugin:Создать новый чертеж": false
+    }
+  },
+  "active": "08ba0487b1e919bb",
+  "lastOpenFiles": [
+    "Pasted Image 20260905194412_756.png",
+    "Pasted Image 20260905183700_978.png",
+    "Pasted Image 20260905183651_072.png",
+    "Pasted Image 20260905183643_052.png",
+    "Pasted Image 20260905183612_981.png",
+    "can_bus_concepts.excalidraw.md",
+    "Pasted Image 20260905183621_895.png",
+    "Pasted Image 20260905183533_294.png",
+    "Pasted Image 20260905183514_856.png",
+    "Pasted Image 20260905183500_677.png",
+    "Pasted Image 20260905183451_041.png",
+    "Pasted Image 20260905182957_019.png",
+    "Добро пожаловать.md"
+  ]
+}
