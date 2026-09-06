@@ -17,7 +17,8 @@ module can_time_manager
     input 	logic 	[CSR_WIDTH - 1 : 0] 	    csr_duration_phase_2_seg        ,
 
     //Prescaler output clock
-    output 	logic 	                            prescaler_out_clk               
+    output  logic 	                            prescaler_clock_tq              ,
+    output  logic 	                            prescaler_clock_bpt     
 );
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of notes section
@@ -74,10 +75,7 @@ logic 	[CSR_WIDTH - 1 : 0] 	    divided_tq_time         ;
 logic 	[CSR_WIDTH - 1 : 0] 	    divided_bpt_time        ;
 
 logic 	[CSR_WIDTH - 1 : 0] 	    prescaler_counter_tq    ;
-logic 	                            prescaler_clock_tq      ;
 logic 	[CSR_WIDTH - 1 : 0] 	    prescaler_counter_bpt   ;
-logic 	                            prescaler_clock_bpt     ;
-
 
 //End of declaring local singals and parameters section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
