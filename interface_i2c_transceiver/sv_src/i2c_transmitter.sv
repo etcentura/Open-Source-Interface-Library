@@ -27,7 +27,6 @@ module i2c_transmitter
     input 	logic 	[CSR_WIDTH-1:0] 	        csr_stretch_clk_dur             ,
     input 	logic 	[9:0]                       csr_address_of_slave            ,
     input 	logic 	[CSR_WIDTH-1:0] 	        csr_tx_bytes_num                ,
-    input 	logic 	[CSR_WIDTH-1:0] 	        csr_fifo_read_req_timing        ,
 
     input 	logic 	[CSR_WIDTH-1:0] 	        csr_control_clk_gen             ,
     input 	logic 	[CSR_WIDTH-1:0] 	        csr_div_cnt_limit_clk_gen       ,
@@ -52,7 +51,6 @@ logic 	                                        csr_stretch_clk_enable_reg      ;
 logic 	                                        csr_stretch_clk_dur_reg         ;
 logic 	[9:0] 	                                csr_address_of_slave_reg        ;
 logic 	[CSR_WIDTH-1:0] 	                    csr_tx_bytes_num_reg            ;
-logic 	[CSR_WIDTH-1:0] 	                    csr_fifo_read_req_timing_reg    ;
 
 //FSM signals
 enum 	logic 	[3:0] 	                    {
@@ -109,7 +107,6 @@ begin
             csr_stretch_clk_dur_reg                 <= '0                               ;
             csr_address_of_slave_reg                <= '0                               ;
             csr_tx_bytes_num_reg                    <= '0                               ;
-            csr_fifo_read_req_timing_reg            <= '0                               ;
         end
     else 
         begin
@@ -120,7 +117,6 @@ begin
                 csr_stretch_clk_dur_reg             <= csr_stretch_clk_dur              ;
                 csr_address_of_slave_reg            <= csr_address_of_slave             ;
                 csr_tx_bytes_num_reg                <= csr_tx_bytes_num                 ;
-                csr_fifo_read_req_timing_reg        <= csr_fifo_read_req_timing         ;
             end
         end
 end
@@ -391,23 +387,28 @@ begin
         end
     else
         begin
-            fifo_read_request <= '0;
-            if(csr_use_max_width_addr_reg)begin
-                if((state == SEND_ADDR_LSB) && (cnt_bits_sent == 1)) begin
-                    fifo_read_request <= '1;
+            if(clk_divider_generated_clk_neg) begin
+                if(csr_use_max_width_addr_reg)begin
+                    if((state == SEND_ADDR_LSB) && (cnt_bits_sent == 1)) begin
+                        fifo_read_request <= '1;
+                    end
+                    else if((state == SEND_DATA_BYTE) && (cnt_bits_sent == 1))begin
+                        fifo_read_request <= '1;
+                    end
                 end
-                else if((state == SEND_DATA_BYTE) && (cnt_bits_sent == 1))begin
-                    fifo_read_request <= '1;
+                else begin
+                    if((state == SEND_ADDR_MSB) && (cnt_bits_sent == 1)) begin
+                        fifo_read_request <= '1;
+                    end
+                    else if((state == SEND_DATA_BYTE) && (cnt_bits_sent == 1))begin
+                        fifo_read_request <= '1;
+                    end
                 end
             end
             else begin
-                if((state == SEND_ADDR_MSB) && (cnt_bits_sent == 1)) begin
-                    fifo_read_request <= '1;
-                end
-                else if((state == SEND_DATA_BYTE) && (cnt_bits_sent == 1))begin
-                    fifo_read_request <= '1;
-                end
+                fifo_read_request <= '0;
             end
+            
         end
 end
 //End of generating read req for fifo section
@@ -424,7 +425,7 @@ begin
         end
     else
         begin
-            if((state == IDLE) && (csr_start_transmission)) begin
+            if(state == SYNC_BY_SCL_NEG) begin
                 if (csr_use_max_width_addr_reg) begin
                     address_to_send_msb     <= {5'b11110, csr_address_of_slave_reg[9:8], 1'b0};
                     address_to_send_lsb     <= csr_address_of_slave_reg[7:0];
@@ -575,6 +576,7 @@ begin
         SEND_ADDR_MSB:      i2c_sda_port_write  = address_to_send_msb[7];
         SEND_ADDR_LSB:      i2c_sda_port_write  = address_to_send_lsb[7];
         SEND_DATA_BYTE:     i2c_sda_port_write  = byte_to_send_show[7];
+        DESYNC_BY_SCL_POS:  i2c_sda_port_write  = '0;
         DESYNC_BY_SCL_NEG:  i2c_sda_port_write  = '0;
         default:            i2c_sda_port_write  = '1;
     endcase
@@ -587,6 +589,7 @@ begin
         SEND_ADDR_MSB:      i2c_scl_port  = clk_divider_generated_clk_reg;
         SEND_ADDR_LSB:      i2c_scl_port  = clk_divider_generated_clk_reg;
         SEND_DATA_BYTE:     i2c_scl_port  = clk_divider_generated_clk_reg;
+        DESYNC_BY_SCL_POS:  i2c_scl_port  = clk_divider_generated_clk_reg;
         DESYNC_BY_SCL_NEG:  i2c_scl_port  = '1;
         STRETCH_CLK:        i2c_scl_port  = '0;
         default:            i2c_scl_port  = '1;
