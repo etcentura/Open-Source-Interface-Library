@@ -55,7 +55,7 @@ logic 	[CSR_WIDTH-1:0] 	                    csr_tx_bytes_num_reg            ;
 logic 	[CSR_WIDTH-1:0] 	                    csr_fifo_read_req_timing_reg    ;
 
 //FSM signals
-enum 	logic 	[width-1:0] 	            {
+enum 	logic 	[3:0] 	                    {
                                                 IDLE                            ,
                                                 SYNC_BY_SCL_NEG                 ,
                                                 SYNC_BY_SCL_POS                 ,
@@ -82,17 +82,17 @@ logic 	                                        clk_divider_generated_clk_pos   ;
 logic 	                                        clk_divider_generated_clk_neg   ;
 
 //Address driving register
-input 	logic 	[7:0]                           address_to_send_msb             ;
-input 	logic 	[7:0]                           address_to_send_lsb             ;
+logic 	[7:0]                                   address_to_send_msb             ;
+logic 	[7:0]                                   address_to_send_lsb             ;
 
 //Data driving register
-input 	logic 	[7:0] 	                        byte_to_send_show               ;
-input 	logic 	[7:0] 	                        byte_to_send_shadow             ;
+ logic 	[7:0] 	                                byte_to_send_show               ;
+ logic 	[7:0] 	                                byte_to_send_shadow             ;
 
 //Counters section
-input 	logic 	[CSR_WIDTH-1:0] 	            cnt_bits_sent                   ;
-input 	logic 	[CSR_WIDTH-1:0] 	            cnt_bytes_sent                  ;
-input 	logic 	[CSR_WIDTH-1:0] 	            cnt_stretch_clk_dur             ;
+logic 	[CSR_WIDTH-1:0] 	                    cnt_bits_sent                   ;
+logic 	[CSR_WIDTH-1:0] 	                    cnt_bytes_sent                  ;
+logic 	[CSR_WIDTH-1:0] 	                    cnt_stretch_clk_dur             ;
 
 //End of declaring local signals and parameters section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -580,7 +580,6 @@ begin
     endcase
 end
 
-i2c_scl_port
 always_comb
 begin
     case (state)
