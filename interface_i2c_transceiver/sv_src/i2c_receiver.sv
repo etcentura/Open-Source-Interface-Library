@@ -104,8 +104,8 @@ logic 	 	                                    byte_to_get_valid               ;
 logic 	[7:0] 	                                byte_to_get_shadow              ;
 
 //Counters section
-logic 	[CSR_WIDTH-1:0] 	                    cnt_bits                    ;
-logic 	[CSR_WIDTH-1:0] 	                    cnt_bytes_sent                  ;
+logic 	[CSR_WIDTH-1:0] 	                    cnt_bits                        ;
+logic 	[CSR_WIDTH-1:0] 	                    cnt_bytes                       ;
 logic 	[CSR_WIDTH-1:0] 	                    cnt_stretch_clk_dur             ;
 //End of declaring local signals and parameters section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -386,7 +386,7 @@ begin
             begin
                 next_state = GET_DATA_BYTE;
                 if((clk_divider_generated_clk_neg) && (cnt_bits == 8))begin
-                    if(cnt_bytes_sent == csr_rx_bytes_num_reg - 1)begin
+                    if(cnt_bytes == csr_rx_bytes_num_reg - 1)begin
                         next_state = DESYNC_BY_SCL_POS;
                     end
                     else begin
@@ -394,7 +394,7 @@ begin
                             next_state = STRETCH_CLK;
                         end
                         else begin
-                            next_state = SEND_DATA_BYTE;
+                            next_state = GET_DATA_BYTE;
                         end
                     end
                 end
@@ -506,7 +506,7 @@ begin
         end
     else
         begin
-            if((clk_divider_generated_clk_neg) && (state == GET_DATA_BYTE) && (cnt_bits_sent == 8))begin
+            if((clk_divider_generated_clk_neg) && (state == GET_DATA_BYTE) && (cnt_bits == 8))begin
                 byte_to_get_show <= byte_to_get_shadow;
                 byte_to_get_valid <= '1;
             end
@@ -525,7 +525,7 @@ begin
         end
     else
         begin
-            if((clk_divider_generated_clk_neg) && (state == GET_DATA_BYTE) && (cnt_bits_sent < 8))begin
+            if((clk_divider_generated_clk_neg) && (state == GET_DATA_BYTE) && (cnt_bits < 8))begin
                 byte_to_get_shadow <= {byte_to_get_shadow, i2c_sda_port_read};
             end
         end
@@ -566,18 +566,18 @@ always_ff @(posedge clk)
 begin
     if(!rst_n)
         begin
-            cnt_bytes_sent <= '0;
+            cnt_bytes <= '0;
         end
     else
         begin
             if(state == GET_DATA_BYTE) begin
                 if(clk_divider_generated_clk_neg)begin
                     if(cnt_bits == 8) begin
-                        if(cnt_bytes_sent == csr_tx_bytes_num_reg - 1)begin
-                            cnt_bytes_sent <= '0;
+                        if(cnt_bytes == csr_rx_bytes_num_reg - 1)begin
+                            cnt_bytes <= '0;
                         end
                         else begin
-                            cnt_bytes_sent <= cnt_bytes_sent + 1;
+                            cnt_bytes <= cnt_bytes + 1;
                         end
                     end
                 end
@@ -730,19 +730,19 @@ begin
             address_reg_msb_transmission_error  <= '0;
             address_reg_lsb_transmission_error  <= '0;
 
-            if((state == SEND_ADDR_MSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
+            if((state == SEND_ADDR_MSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits == 8) && (i2c_sda_port_read == '1)) begin
                 address_msb_transmission_error  <= '1;
             end
 
-            if((state == SEND_ADDR_LSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
+            if((state == SEND_ADDR_LSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits == 8) && (i2c_sda_port_read == '1)) begin
                 address_lsb_transmission_error  <= '1;
             end
 
-            if((state == SEND_REG_ADDR_MSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
+            if((state == SEND_REG_ADDR_MSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits == 8) && (i2c_sda_port_read == '1)) begin
                 address_lsb_transmission_error  <= '1;
             end
 
-            if((state == SEND_REG_ADDR_LSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
+            if((state == SEND_REG_ADDR_LSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits == 8) && (i2c_sda_port_read == '1)) begin
                 address_lsb_transmission_error  <= '1;
             end
         end
