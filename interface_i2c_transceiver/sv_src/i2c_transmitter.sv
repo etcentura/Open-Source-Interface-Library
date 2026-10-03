@@ -15,6 +15,7 @@ module i2c_transmitter
     output 	logic 	                            fifo_read_request               ,
 
     //Inout i2c port
+    output  logic                               i2c_bus_direction               , //0 - to slave, 1 - from slave
     output  logic                               i2c_sda_port_write              ,
     input   logic                               i2c_sda_port_read               ,
     output  logic                               i2c_scl_port                    ,
@@ -596,6 +597,20 @@ begin
     endcase
 end
 //End of driving output lines section
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+//Begin of driving i2c port direction section
+always_comb
+begin
+    case (state)
+        SEND_ADDR_MSB:      i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
+        SEND_ADDR_LSB:      i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
+        SEND_DATA_BYTE:     i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
+        default:            i2c_bus_direction = '0;
+    endcase
+end
+//End of driving i2c port direction section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv

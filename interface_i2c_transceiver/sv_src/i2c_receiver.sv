@@ -14,6 +14,7 @@ module i2c_receiver
     output 	logic 	[7:0] 	                    fifo_data                               ,
 
     //Inout i2c port
+    output  logic                               i2c_bus_direction                       , //0 - to slave, 1 - from slave
     output  logic                               i2c_sda_port_write                      ,
     input   logic                               i2c_sda_port_read                       ,
     output  logic                               i2c_scl_port                            ,
@@ -103,7 +104,7 @@ logic 	 	                                    byte_to_get_valid               ;
 logic 	[7:0] 	                                byte_to_get_shadow              ;
 
 //Counters section
-logic 	[CSR_WIDTH-1:0] 	                    cnt_bits_got                    ;
+logic 	[CSR_WIDTH-1:0] 	                    cnt_bits                    ;
 logic 	[CSR_WIDTH-1:0] 	                    cnt_bytes_sent                  ;
 logic 	[CSR_WIDTH-1:0] 	                    cnt_stretch_clk_dur             ;
 //End of declaring local signals and parameters section
@@ -235,7 +236,7 @@ begin
         SEND_ADDR_MSB:
             begin
                 next_state = SEND_ADDR_MSB;
-                if((clk_divider_generated_clk_neg) && (cnt_bits_got == 8))begin
+                if((clk_divider_generated_clk_neg) && (cnt_bits == 8))begin
                     if(csr_ignore_nack_reg)begin
                         if(csr_stretch_clk_enable_reg)begin
                             next_state = STRETCH_CLK;
@@ -283,7 +284,7 @@ begin
         SEND_ADDR_LSB:
             begin
                 next_state = SEND_ADDR_LSB;
-                if((clk_divider_generated_clk_neg) && (cnt_bits_got == 8))begin
+                if((clk_divider_generated_clk_neg) && (cnt_bits == 8))begin
                     if(csr_ignore_nack_reg)begin
                         if(csr_stretch_clk_enable_reg)begin
                             next_state = STRETCH_CLK;
@@ -320,7 +321,7 @@ begin
         SEND_REG_ADDR_MSB:
             begin
                 next_state = SEND_REG_ADDR_MSB;
-                if((clk_divider_generated_clk_neg) && (cnt_bits_got == 8))begin
+                if((clk_divider_generated_clk_neg) && (cnt_bits == 8))begin
                     if(csr_ignore_nack_reg)begin
                         if(csr_stretch_clk_enable_reg)begin
                             next_state = STRETCH_CLK;
@@ -357,7 +358,7 @@ begin
         SEND_REG_ADDR_LSB:
             begin
                 next_state = SEND_REG_ADDR_LSB;
-                if((clk_divider_generated_clk_neg) && (cnt_bits_got == 8))begin
+                if((clk_divider_generated_clk_neg) && (cnt_bits == 8))begin
                     if(csr_ignore_nack_reg)begin
                         if(csr_stretch_clk_enable_reg)begin
                             next_state = STRETCH_CLK;
@@ -384,7 +385,7 @@ begin
         GET_DATA_BYTE:
             begin
                 next_state = GET_DATA_BYTE;
-                if((clk_divider_generated_clk_neg) && (cnt_bits_got == 8))begin
+                if((clk_divider_generated_clk_neg) && (cnt_bits == 8))begin
                     if(cnt_bytes_sent == csr_rx_bytes_num_reg - 1)begin
                         next_state = DESYNC_BY_SCL_POS;
                     end
@@ -539,23 +540,23 @@ always_ff @(posedge clk)
 begin
     if(!rst_n)
         begin
-            cnt_bits_got <= '0;
+            cnt_bits <= '0;
         end
     else
         begin
             if((state == SEND_ADDR_MSB) || (state == SEND_ADDR_LSB) || (state == GET_DATA_BYTE)
                 || (state == SEND_REG_ADDR_MSB) || (state == SEND_REG_ADDR_LSB)) begin
                 if(clk_divider_generated_clk_neg)begin
-                    if(cnt_bits_got == 8) begin
-                        cnt_bits_got <= '0;
+                    if(cnt_bits == 8) begin
+                        cnt_bits <= '0;
                     end
                     else begin
-                        cnt_bits_got <= cnt_bits_got + 1;
+                        cnt_bits <= cnt_bits + 1;
                     end
                 end
             end
             else begin
-                cnt_bits_got <= '0;
+                cnt_bits <= '0;
             end
         end
 end
@@ -571,7 +572,7 @@ begin
         begin
             if(state == GET_DATA_BYTE) begin
                 if(clk_divider_generated_clk_neg)begin
-                    if(cnt_bits_got == 8) begin
+                    if(cnt_bits == 8) begin
                         if(cnt_bytes_sent == csr_tx_bytes_num_reg - 1)begin
                             cnt_bytes_sent <= '0;
                         end
@@ -667,6 +668,22 @@ begin
         end
 end
 //End of driving output fifo ports section
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+//Begin of driving i2c port direction section
+always_comb
+begin
+    case (state)
+        SEND_ADDR_MSB:      i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
+        SEND_ADDR_LSB:      i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
+        SEND_REG_ADDR_MSB:  i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
+        SEND_REG_ADDR_LSB:  i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
+        GET_DATA_BYTE:      i2c_bus_direction = (cnt_bits == 8) ? '1 : '0;
+        default:            i2c_bus_direction = '0;
+    endcase
+end
+//End of driving i2c port direction section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
