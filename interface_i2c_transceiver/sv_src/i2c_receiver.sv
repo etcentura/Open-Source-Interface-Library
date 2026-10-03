@@ -209,6 +209,69 @@ begin
         end
 end
 
+always_ff @(posedge clk)
+begin
+    if(!rst_n)
+        begin
+            jump_state <= IDLE;
+        end
+    else
+        begin
+            case (state)
+                SEND_ADDR_MSB:
+                    begin
+                        if(csr_stretch_clk_enable_reg)begin
+                            if(csr_use_max_width_addr_reg) begin
+                                jump_state <= SEND_ADDR_LSB;
+                            end
+                            else begin
+                                if(csr_use_register_addr_msb)begin
+                                    jump_state <= SEND_REG_ADDR_MSB;
+                                end
+                                else begin
+                                    jump_state <= GET_DATA_BYTE;
+                                end
+                            end
+                        end
+                    end
+                SEND_ADDR_LSB:
+                    begin
+                        if(csr_stretch_clk_enable_reg)begin
+                            if(csr_use_register_addr_msb)begin
+                                jump_state <= SEND_REG_ADDR_MSB;
+                            end
+                            else begin
+                                jump_state <= GET_DATA_BYTE;
+                            end
+                        end
+                    end
+                SEND_REG_ADDR_MSB:
+                    begin
+                        if(csr_stretch_clk_enable_reg)begin
+                            if(csr_use_register_addr_lsb)begin
+                                jump_state <= SEND_REG_ADDR_LSB;
+                            end
+                            else begin
+                                jump_state <= GET_DATA_BYTE;
+                            end
+                        end
+                    end
+                SEND_REG_ADDR_LSB:
+                    begin
+                        if(csr_stretch_clk_enable_reg)begin
+                            jump_state <= GET_DATA_BYTE;
+                        end
+                    end
+                GET_DATA_BYTE:
+                    begin
+                        if(csr_stretch_clk_enable_reg)begin
+                            jump_state <= GET_DATA_BYTE;
+                        end
+                    end
+            endcase
+        end
+end
+
 always_comb
 begin
     case (state)
@@ -725,25 +788,32 @@ begin
         end
     else
         begin
-            address_msb_transmission_error      <= '0;
-            address_lsb_transmission_error      <= '0;
-            address_reg_msb_transmission_error  <= '0;
-            address_reg_lsb_transmission_error  <= '0;
-
             if((state == SEND_ADDR_MSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits == 8) && (i2c_sda_port_read == '1)) begin
                 address_msb_transmission_error  <= '1;
+            end
+            else begin
+                address_msb_transmission_error  <= '0;
             end
 
             if((state == SEND_ADDR_LSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits == 8) && (i2c_sda_port_read == '1)) begin
                 address_lsb_transmission_error  <= '1;
             end
+            else begin
+                address_lsb_transmission_error  <= '0;
+            end
 
             if((state == SEND_REG_ADDR_MSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits == 8) && (i2c_sda_port_read == '1)) begin
                 address_lsb_transmission_error  <= '1;
             end
+            else begin
+                address_lsb_transmission_error  <= '0;
+            end
 
             if((state == SEND_REG_ADDR_LSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits == 8) && (i2c_sda_port_read == '1)) begin
                 address_lsb_transmission_error  <= '1;
+            end
+            else begin
+                address_lsb_transmission_error  <= '0;
             end
         end
 end

@@ -9,13 +9,13 @@ module i2c_line_manager
     inout       wire        i2c_sda_line                    ,
 
     //Bus connected to the transmitter
-    output 	    logic 	    i2c_transmitter_clock           ,
+    input 	    logic 	    i2c_transmitter_clock           ,
     input 	    logic 	    i2c_transmitter_bus_direction   ,
     input 	    logic 	    i2c_transmitter_write_data      ,
     output 	    logic 	    i2c_transmitter_read_data       ,
 
     //Bus connected to the reciever
-    output 	    logic 	    i2c_reciever_clock              ,
+    input 	    logic 	    i2c_reciever_clock              ,
     input 	    logic 	    i2c_reciever_bus_direction      ,
     input 	    logic 	    i2c_reciever_write_data         ,
     output 	    logic 	    i2c_reciever_read_data          

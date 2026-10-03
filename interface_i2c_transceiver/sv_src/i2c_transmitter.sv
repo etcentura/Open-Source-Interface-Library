@@ -49,7 +49,7 @@ module i2c_transmitter
 logic 	                                        csr_use_max_width_addr_reg      ;
 logic 	                                        csr_ignore_nack_reg             ;
 logic 	                                        csr_stretch_clk_enable_reg      ;
-logic 	                                        csr_stretch_clk_dur_reg         ;
+logic 	[CSR_WIDTH-1:0] 	                    csr_stretch_clk_dur_reg         ;
 logic 	[9:0] 	                                csr_address_of_slave_reg        ;
 logic 	[CSR_WIDTH-1:0] 	                    csr_tx_bytes_num_reg            ;
 
@@ -604,9 +604,9 @@ end
 always_comb
 begin
     case (state)
-        SEND_ADDR_MSB:      i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
-        SEND_ADDR_LSB:      i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
-        SEND_DATA_BYTE:     i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
+        SEND_ADDR_MSB:      i2c_bus_direction = (cnt_bits_sent == 8) ? '0 : '1;
+        SEND_ADDR_LSB:      i2c_bus_direction = (cnt_bits_sent == 8) ? '0 : '1;
+        SEND_DATA_BYTE:     i2c_bus_direction = (cnt_bits_sent == 8) ? '0 : '1;
         default:            i2c_bus_direction = '0;
     endcase
 end
@@ -651,20 +651,25 @@ begin
         end
     else
         begin
-            address_msb_transmission_error  <= '0;
-            address_lsb_transmission_error  <= '0;
-            data_byte_transmission_error    <= '0;
-
             if((state == SEND_ADDR_MSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
                 address_msb_transmission_error  <= '1;
+            end
+            else begin
+                address_msb_transmission_error  <= '0;
             end
 
             if((state == SEND_ADDR_LSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
                 address_lsb_transmission_error  <= '1;
             end
+            else begin
+                address_lsb_transmission_error  <= '0;
+            end
 
             if((state == SEND_DATA_BYTE) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
                 data_byte_transmission_error    <= '1;
+            end
+            else begin
+                data_byte_transmission_error    <= '0;
             end
         end
 end
