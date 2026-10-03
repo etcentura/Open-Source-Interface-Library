@@ -1,4 +1,4 @@
-module i2c_transmitter
+module i2c_receiver
 #
 (
     parameter 	CSR_WIDTH 	        = 32
@@ -6,39 +6,43 @@ module i2c_transmitter
 
 (
     //Basic signals declaration
-    input 	logic 		                        clk                             ,
-    input 	logic 		                        rst_n                           ,
+    input 	logic 		                        clk                                     ,
+    input 	logic 		                        rst_n                                   ,
 
     //FIFO Buffer communication bus
-    input 	logic 	                            fifo_valid                      ,
-    input 	logic 	[7:0] 	                    fifo_data                       ,
-    output 	logic 	                            fifo_read_request               ,
+    output 	logic 	                            fifo_valid                              ,
+    output 	logic 	[7:0] 	                    fifo_data                               ,
 
     //Inout i2c port
-    output  logic                               i2c_sda_port_write              ,
-    input   logic                               i2c_sda_port_read               ,
-    output  logic                               i2c_scl_port                    ,
+    output  logic                               i2c_sda_port_write                      ,
+    input   logic                               i2c_sda_port_read                       ,
+    output  logic                               i2c_scl_port                            ,
     
     //Config signals
-    input 	logic 	                            csr_start_transmission          ,
-    input 	logic 	                            csr_use_max_width_addr          ,
-    input 	logic 	                            csr_ignore_nack                 ,
-    input 	logic 	                            csr_stretch_clk_enable          ,
-    input 	logic 	[CSR_WIDTH-1:0] 	        csr_stretch_clk_dur             ,
-    input 	logic 	[9:0]                       csr_address_of_slave            ,
-    input 	logic 	[CSR_WIDTH-1:0] 	        csr_tx_bytes_num                ,
+    input 	logic 	                            csr_start_transmission                  ,
+    input 	logic 	                            csr_use_max_width_addr                  ,
+    input 	logic 	                            csr_use_register_addr_msb               ,
+    input 	logic 	                            csr_use_register_addr_lsb               ,
+    input 	logic 	[7:0]                       csr_register_addr_msb                   ,
+    input 	logic 	[7:0]                       csr_register_addr_lsb                   ,
+    input 	logic 	                            csr_ignore_nack                         ,
+    input 	logic 	                            csr_stretch_clk_enable                  ,
+    input 	logic 	[CSR_WIDTH-1:0] 	        csr_stretch_clk_dur                     ,
+    input 	logic 	[9:0]                       csr_address_of_slave                    ,
+    input 	logic 	[CSR_WIDTH-1:0] 	        csr_rx_bytes_num                        ,
 
-    input 	logic 	[CSR_WIDTH-1:0] 	        csr_control_clk_gen             ,
-    input 	logic 	[CSR_WIDTH-1:0] 	        csr_div_cnt_limit_clk_gen       ,
-    input 	logic 	[CSR_WIDTH-1:0] 	        csr_raise_pos_clk_gen           ,
-    input 	logic 	[CSR_WIDTH-1:0] 	        csr_fall_pos_clk_gen            ,
+    input 	logic 	[CSR_WIDTH-1:0] 	        csr_control_clk_gen                     ,
+    input 	logic 	[CSR_WIDTH-1:0] 	        csr_div_cnt_limit_clk_gen               ,
+    input 	logic 	[CSR_WIDTH-1:0] 	        csr_raise_pos_clk_gen                   ,
+    input 	logic 	[CSR_WIDTH-1:0] 	        csr_fall_pos_clk_gen                    ,
 
     //Status signals
-    output 	logic 	                            busy_status                     ,
-    output 	logic 	                            reset_required                  ,
-    output 	logic 	                            address_msb_transmission_error  ,
-    output 	logic 	                            address_lsb_transmission_error  ,
-    output 	logic 	                            data_byte_transmission_error
+    output 	logic 	                            busy_status                             ,
+    output 	logic 	                            reset_required                          ,
+    output 	logic 	                            address_msb_transmission_error          ,
+    output 	logic 	                            address_lsb_transmission_error          ,
+    output 	logic 	                            address_reg_msb_transmission_error      ,
+    output 	logic 	                            address_reg_lsb_transmission_error      
 );
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -46,11 +50,15 @@ module i2c_transmitter
 
 //Setup registers
 logic 	                                        csr_use_max_width_addr_reg      ;
+logic 	                                        csr_use_register_addr_msb_reg   ;
+logic 	                                        csr_use_register_addr_lsb_reg   ;
+logic 	[7:0]                                   csr_register_addr_msb_reg       ;
+logic 	[7:0]                                   csr_register_addr_lsb_reg       ;
 logic 	                                        csr_ignore_nack_reg             ;
 logic 	                                        csr_stretch_clk_enable_reg      ;
-logic 	                                        csr_stretch_clk_dur_reg         ;
-logic 	[9:0] 	                                csr_address_of_slave_reg        ;
-logic 	[CSR_WIDTH-1:0] 	                    csr_tx_bytes_num_reg            ;
+logic 	[CSR_WIDTH-1:0] 	                    csr_stretch_clk_dur_reg         ;
+logic 	[9:0]                                   csr_address_of_slave_reg        ;
+logic 	[CSR_WIDTH-1:0] 	                    csr_rx_bytes_num_reg            ;
 
 //FSM signals
 enum 	logic 	[3:0] 	                    {
@@ -59,7 +67,9 @@ enum 	logic 	[3:0] 	                    {
                                                 SYNC_BY_SCL_POS                 ,
                                                 SEND_ADDR_MSB                   ,
                                                 SEND_ADDR_LSB                   ,
-                                                SEND_DATA_BYTE                  ,
+                                                SEND_REG_ADDR_MSB               ,
+                                                SEND_REG_ADDR_LSB               ,
+                                                GET_DATA_BYTE                   ,
                                                 STRETCH_CLK                     ,
                                                 DESYNC_BY_SCL_NEG               ,
                                                 DESYNC_BY_SCL_POS               ,
@@ -83,15 +93,19 @@ logic 	                                        clk_divider_generated_clk_neg   ;
 logic 	[7:0]                                   address_to_send_msb             ;
 logic 	[7:0]                                   address_to_send_lsb             ;
 
+//Register address driving
+logic 	[7:0]                                   reg_address_to_send_msb         ;
+logic 	[7:0]                                   reg_address_to_send_lsb         ;
+
 //Data driving register
-logic 	[7:0] 	                                byte_to_send_show               ;
-logic 	[7:0] 	                                byte_to_send_shadow             ;
+logic 	[7:0] 	                                byte_to_get_show                ;
+logic 	 	                                    byte_to_get_valid               ;
+logic 	[7:0] 	                                byte_to_get_shadow              ;
 
 //Counters section
-logic 	[CSR_WIDTH-1:0] 	                    cnt_bits_sent                   ;
+logic 	[CSR_WIDTH-1:0] 	                    cnt_bits_got                    ;
 logic 	[CSR_WIDTH-1:0] 	                    cnt_bytes_sent                  ;
 logic 	[CSR_WIDTH-1:0] 	                    cnt_stretch_clk_dur             ;
-
 //End of declaring local signals and parameters section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -101,22 +115,30 @@ always_ff @(posedge clk)
 begin
     if(!rst_n)
         begin
-            csr_use_max_width_addr_reg              <= '0                               ;
-            csr_ignore_nack_reg                     <= '0                               ;
-            csr_stretch_clk_enable_reg              <= '0                               ;
-            csr_stretch_clk_dur_reg                 <= '0                               ;
-            csr_address_of_slave_reg                <= '0                               ;
-            csr_tx_bytes_num_reg                    <= '0                               ;
+            csr_use_max_width_addr_reg          <= '0;
+            csr_use_register_addr_msb_reg       <= '0;
+            csr_use_register_addr_lsb_reg       <= '0;
+            csr_register_addr_msb_reg           <= '0;
+            csr_register_addr_lsb_reg           <= '0;
+            csr_ignore_nack_reg                 <= '0;
+            csr_stretch_clk_enable_reg          <= '0;
+            csr_stretch_clk_dur_reg             <= '0;
+            csr_address_of_slave_reg            <= '0;
+            csr_rx_bytes_num_reg                <= '0;
         end
     else 
         begin
             if ((state == IDLE) && (csr_start_transmission)) begin
-                csr_use_max_width_addr_reg          <= csr_use_max_width_addr           ;
-                csr_ignore_nack_reg                 <= csr_ignore_nack                  ;
-                csr_stretch_clk_enable_reg          <= csr_stretch_clk_enable           ;
-                csr_stretch_clk_dur_reg             <= csr_stretch_clk_dur              ;
-                csr_address_of_slave_reg            <= csr_address_of_slave             ;
-                csr_tx_bytes_num_reg                <= csr_tx_bytes_num                 ;
+                csr_use_max_width_addr_reg          <= csr_use_max_width_addr    ;
+                csr_use_register_addr_msb_reg       <= csr_use_register_addr_msb ;
+                csr_use_register_addr_lsb_reg       <= csr_use_register_addr_lsb ;
+                csr_register_addr_msb_reg           <= csr_register_addr_msb     ;
+                csr_register_addr_lsb_reg           <= csr_register_addr_lsb     ;
+                csr_ignore_nack_reg                 <= csr_ignore_nack           ;
+                csr_stretch_clk_enable_reg          <= csr_stretch_clk_enable    ;
+                csr_stretch_clk_dur_reg             <= csr_stretch_clk_dur       ;
+                csr_address_of_slave_reg            <= csr_address_of_slave      ;
+                csr_rx_bytes_num_reg                <= csr_rx_bytes_num          ;
             end
         end
 end
@@ -186,43 +208,6 @@ begin
         end
 end
 
-always_ff @(posedge clk)
-begin
-    if(!rst_n)
-        begin
-            jump_state <= IDLE;
-        end
-    else
-        begin
-            case (state)
-                SEND_ADDR_MSB:
-                    begin
-                        if(csr_stretch_clk_enable_reg)begin
-                            if(csr_use_max_width_addr_reg) begin
-                                jump_state <= SEND_ADDR_LSB;
-                            end
-                            else begin
-                                jump_state <= SEND_DATA_BYTE;
-                            end
-                        end
-                    end
-                SEND_ADDR_LSB:
-                    begin
-                        if(csr_stretch_clk_enable_reg)begin
-                            jump_state <= SEND_DATA_BYTE;
-                        end
-                    end
-                SEND_DATA_BYTE:
-                    begin
-                        if(csr_stretch_clk_enable_reg)begin
-                            jump_state <= SEND_DATA_BYTE;
-                        end
-                    end
-            endcase
-        end
-end
-
-
 always_comb
 begin
     case (state)
@@ -250,7 +235,7 @@ begin
         SEND_ADDR_MSB:
             begin
                 next_state = SEND_ADDR_MSB;
-                if((clk_divider_generated_clk_neg) && (cnt_bits_sent == 8))begin
+                if((clk_divider_generated_clk_neg) && (cnt_bits_got == 8))begin
                     if(csr_ignore_nack_reg)begin
                         if(csr_stretch_clk_enable_reg)begin
                             next_state = STRETCH_CLK;
@@ -260,7 +245,12 @@ begin
                                 next_state = SEND_ADDR_LSB;
                             end
                             else begin
-                                next_state = SEND_DATA_BYTE;
+                                if(csr_use_register_addr_msb)begin
+                                    next_state = SEND_REG_ADDR_MSB;
+                                end
+                                else begin
+                                    next_state = GET_DATA_BYTE;
+                                end
                             end
                         end
                     end
@@ -277,7 +267,13 @@ begin
                                     next_state = SEND_ADDR_LSB;
                                 end
                                 else begin
-                                    next_state = SEND_DATA_BYTE;
+                                    if(csr_use_register_addr_msb)begin
+                                        next_state = SEND_REG_ADDR_MSB;
+                                    end
+                                    else begin
+                                        next_state = GET_DATA_BYTE;
+                                    end
+                                    
                                 end
                             end
                         end
@@ -287,13 +283,18 @@ begin
         SEND_ADDR_LSB:
             begin
                 next_state = SEND_ADDR_LSB;
-                if((clk_divider_generated_clk_neg) && (cnt_bits_sent == 8))begin
+                if((clk_divider_generated_clk_neg) && (cnt_bits_got == 8))begin
                     if(csr_ignore_nack_reg)begin
                         if(csr_stretch_clk_enable_reg)begin
                             next_state = STRETCH_CLK;
                         end
                         else begin
-                            next_state = SEND_DATA_BYTE;
+                            if(csr_use_register_addr_msb)begin
+                                next_state = SEND_REG_ADDR_MSB;
+                            end
+                            else begin
+                                next_state = GET_DATA_BYTE;
+                            end
                         end
                     end
                     else begin
@@ -305,40 +306,94 @@ begin
                                 next_state = STRETCH_CLK;
                             end
                             else begin
-                                next_state = SEND_DATA_BYTE;
+                                if(csr_use_register_addr_msb)begin
+                                    next_state = SEND_REG_ADDR_MSB;
+                                end
+                                else begin
+                                    next_state = GET_DATA_BYTE;
+                                end
                             end
                         end
                     end
                 end
             end
-        SEND_DATA_BYTE:
+        SEND_REG_ADDR_MSB:
             begin
-                next_state = SEND_DATA_BYTE;
-                if((clk_divider_generated_clk_neg) && (cnt_bits_sent == 8))begin
-                    if(cnt_bytes_sent == csr_tx_bytes_num_reg - 1)begin
-                        next_state = DESYNC_BY_SCL_POS;
+                next_state = SEND_REG_ADDR_MSB;
+                if((clk_divider_generated_clk_neg) && (cnt_bits_got == 8))begin
+                    if(csr_ignore_nack_reg)begin
+                        if(csr_stretch_clk_enable_reg)begin
+                            next_state = STRETCH_CLK;
+                        end
+                        else begin
+                            if(csr_use_register_addr_lsb)begin
+                                next_state = SEND_REG_ADDR_LSB;
+                            end
+                            else begin
+                                next_state = GET_DATA_BYTE;
+                            end
+                        end
                     end
                     else begin
-                        if(csr_ignore_nack_reg)begin
+                        if(i2c_sda_port_read == '1) begin
+                            next_state = ERROR_STATE;
+                        end
+                        else begin
                             if(csr_stretch_clk_enable_reg)begin
                                 next_state = STRETCH_CLK;
                             end
                             else begin
-                                next_state = SEND_DATA_BYTE;
-                            end
-                        end
-                        else begin
-                            if(i2c_sda_port_read == '1) begin
-                                next_state = ERROR_STATE;
-                            end
-                            else begin
-                                if(csr_stretch_clk_enable_reg)begin
-                                    next_state = STRETCH_CLK;
+                                if(csr_use_register_addr_lsb)begin
+                                    next_state = SEND_REG_ADDR_LSB;
                                 end
                                 else begin
-                                    next_state = SEND_DATA_BYTE;
+                                    next_state = GET_DATA_BYTE;
                                 end
                             end
+                        end
+                    end
+                end
+            end
+        SEND_REG_ADDR_LSB:
+            begin
+                next_state = SEND_REG_ADDR_LSB;
+                if((clk_divider_generated_clk_neg) && (cnt_bits_got == 8))begin
+                    if(csr_ignore_nack_reg)begin
+                        if(csr_stretch_clk_enable_reg)begin
+                            next_state = STRETCH_CLK;
+                        end
+                        else begin
+                            next_state = GET_DATA_BYTE;
+                        end
+                    end
+                    else begin
+                        if(i2c_sda_port_read == '1) begin
+                            next_state = ERROR_STATE;
+                        end
+                        else begin
+                            if(csr_stretch_clk_enable_reg)begin
+                                next_state = STRETCH_CLK;
+                            end
+                            else begin
+                                next_state = GET_DATA_BYTE;
+                            end
+                        end
+                    end
+                end
+            end
+        GET_DATA_BYTE:
+            begin
+                next_state = GET_DATA_BYTE;
+                if((clk_divider_generated_clk_neg) && (cnt_bits_got == 8))begin
+                    if(cnt_bytes_sent == csr_rx_bytes_num_reg - 1)begin
+                        next_state = DESYNC_BY_SCL_POS;
+                    end
+                    else begin
+                        if(csr_stretch_clk_enable_reg)begin
+                            next_state = STRETCH_CLK;
+                        end
+                        else begin
+                            next_state = SEND_DATA_BYTE;
                         end
                     end
                 end
@@ -378,43 +433,6 @@ end
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-//Begin of generating read req for fifo section
-always_ff @(posedge clk)
-begin
-    if(!rst_n)
-        begin
-            fifo_read_request <= '0;
-        end
-    else
-        begin
-            if(clk_divider_generated_clk_neg) begin
-                if(csr_use_max_width_addr_reg)begin
-                    if((state == SEND_ADDR_LSB) && (cnt_bits_sent == 1)) begin
-                        fifo_read_request <= '1;
-                    end
-                    else if((state == SEND_DATA_BYTE) && (cnt_bits_sent == 1))begin
-                        fifo_read_request <= '1;
-                    end
-                end
-                else begin
-                    if((state == SEND_ADDR_MSB) && (cnt_bits_sent == 1)) begin
-                        fifo_read_request <= '1;
-                    end
-                    else if((state == SEND_DATA_BYTE) && (cnt_bits_sent == 1))begin
-                        fifo_read_request <= '1;
-                    end
-                end
-            end
-            else begin
-                fifo_read_request <= '0;
-            end
-            
-        end
-end
-//End of generating read req for fifo section
-//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of driving address setup section
 always_ff @(posedge clk)
 begin
@@ -450,24 +468,49 @@ end
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+//Begin of driving register address setup section
+always_ff @(posedge clk)
+begin
+    if(!rst_n)
+        begin
+            reg_address_to_send_msb     <= '0;
+            reg_address_to_send_lsb     <= '0;
+        end
+    else
+        begin
+            if(state == SYNC_BY_SCL_NEG) begin
+                reg_address_to_send_msb     <= csr_register_addr_msb;
+                reg_address_to_send_lsb     <= csr_register_addr_lsb;
+            end
+            else if(state == SEND_REG_ADDR_MSB)begin
+                reg_address_to_send_msb <= {reg_address_to_send_msb, 1'b0};
+            end
+            else if(state == SEND_REG_ADDR_LSB)begin
+                reg_address_to_send_lsb <= {reg_address_to_send_lsb, 1'b0};
+            end
+        end
+end
+//End of driving register address setup section
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of data register driving section
 //Show register
 always_ff @(posedge clk)
 begin
     if(!rst_n)
         begin
-            byte_to_send_show <= '0;
+            byte_to_get_show <= '0;
+            byte_to_get_valid <= '0;
         end
     else
         begin
-            if(clk_divider_generated_clk_neg)begin
-                if(cnt_bits_sent == 8)begin
-                    byte_to_send_show <= byte_to_send_shadow;
-                end
-                else if(state == SEND_DATA_BYTE)begin
-                    byte_to_send_show <= {byte_to_send_show, 1'b0};
-                end
-                
+            if((clk_divider_generated_clk_neg) && (state == GET_DATA_BYTE) && (cnt_bits_sent == 8))begin
+                byte_to_get_show <= byte_to_get_shadow;
+                byte_to_get_valid <= '1;
+            end
+            else begin
+                byte_to_get_valid <= '0;
             end
         end
 end
@@ -477,12 +520,12 @@ always_ff @(posedge clk)
 begin
     if(!rst_n)
         begin
-            byte_to_send_shadow <= '0;
+            byte_to_get_shadow <= '0;
         end
     else
         begin
-            if(fifo_valid)begin
-                byte_to_send_shadow <= fifo_data;
+            if((clk_divider_generated_clk_neg) && (state == GET_DATA_BYTE) && (cnt_bits_sent < 8))begin
+                byte_to_get_shadow <= {byte_to_get_shadow, i2c_sda_port_read};
             end
         end
 end
@@ -496,22 +539,23 @@ always_ff @(posedge clk)
 begin
     if(!rst_n)
         begin
-            cnt_bits_sent <= '0;
+            cnt_bits_got <= '0;
         end
     else
         begin
-            if((state == SEND_ADDR_MSB) || (state == SEND_ADDR_LSB) || (state == SEND_DATA_BYTE)) begin
+            if((state == SEND_ADDR_MSB) || (state == SEND_ADDR_LSB) || (state == GET_DATA_BYTE)
+                || (state == SEND_REG_ADDR_MSB) || (state == SEND_REG_ADDR_LSB)) begin
                 if(clk_divider_generated_clk_neg)begin
-                    if(cnt_bits_sent == 8) begin
-                        cnt_bits_sent <= '0;
+                    if(cnt_bits_got == 8) begin
+                        cnt_bits_got <= '0;
                     end
                     else begin
-                        cnt_bits_sent <= cnt_bits_sent + 1;
+                        cnt_bits_got <= cnt_bits_got + 1;
                     end
                 end
             end
             else begin
-                cnt_bits_sent <= '0;
+                cnt_bits_got <= '0;
             end
         end
 end
@@ -525,9 +569,9 @@ begin
         end
     else
         begin
-            if(state == SEND_DATA_BYTE) begin
+            if(state == GET_DATA_BYTE) begin
                 if(clk_divider_generated_clk_neg)begin
-                    if(cnt_bits_sent == 8) begin
+                    if(cnt_bits_got == 8) begin
                         if(cnt_bytes_sent == csr_tx_bytes_num_reg - 1)begin
                             cnt_bytes_sent <= '0;
                         end
@@ -575,7 +619,9 @@ begin
         SYNC_BY_SCL_NEG:    i2c_sda_port_write  = '0;
         SEND_ADDR_MSB:      i2c_sda_port_write  = address_to_send_msb[7];
         SEND_ADDR_LSB:      i2c_sda_port_write  = address_to_send_lsb[7];
-        SEND_DATA_BYTE:     i2c_sda_port_write  = byte_to_send_show[7];
+        SEND_REG_ADDR_MSB:  i2c_sda_port_write  = reg_address_to_send_msb[7];
+        SEND_REG_ADDR_LSB:  i2c_sda_port_write  = reg_address_to_send_lsb[7];
+        GET_DATA_BYTE:      i2c_sda_port_write  = '0; //SHOWING ACK
         DESYNC_BY_SCL_POS:  i2c_sda_port_write  = '0;
         DESYNC_BY_SCL_NEG:  i2c_sda_port_write  = '0;
         default:            i2c_sda_port_write  = '1;
@@ -588,7 +634,9 @@ begin
         SYNC_BY_SCL_NEG:    i2c_scl_port  = '1;
         SEND_ADDR_MSB:      i2c_scl_port  = clk_divider_generated_clk_reg;
         SEND_ADDR_LSB:      i2c_scl_port  = clk_divider_generated_clk_reg;
-        SEND_DATA_BYTE:     i2c_scl_port  = clk_divider_generated_clk_reg;
+        SEND_REG_ADDR_MSB:  i2c_scl_port  = clk_divider_generated_clk_reg;
+        SEND_REG_ADDR_LSB:  i2c_scl_port  = clk_divider_generated_clk_reg;
+        GET_DATA_BYTE:      i2c_scl_port  = clk_divider_generated_clk_reg;
         DESYNC_BY_SCL_POS:  i2c_scl_port  = clk_divider_generated_clk_reg;
         DESYNC_BY_SCL_NEG:  i2c_scl_port  = '1;
         STRETCH_CLK:        i2c_scl_port  = '0;
@@ -596,6 +644,29 @@ begin
     endcase
 end
 //End of driving output lines section
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+//Begin of driving output fifo ports section
+always_ff @(posedge clk)
+begin
+    if(!rst_n)
+        begin
+            fifo_valid  <= '0;
+            fifo_data   <= '0;
+        end
+    else
+        begin
+            if(byte_to_get_valid)begin
+                fifo_data   <= byte_to_get_show;
+                fifo_valid  <= '1;
+            end
+            else begin
+                fifo_valid <= '0;
+            end
+        end
+end
+//End of driving output fifo ports section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -630,15 +701,17 @@ always_ff @(posedge clk)
 begin
     if(!rst_n)
         begin
-            address_msb_transmission_error  <= '0;
-            address_lsb_transmission_error  <= '0;
-            data_byte_transmission_error    <= '0;
+            address_msb_transmission_error      <= '0;
+            address_lsb_transmission_error      <= '0;
+            address_reg_msb_transmission_error  <= '0;
+            address_reg_lsb_transmission_error  <= '0;
         end
     else
         begin
-            address_msb_transmission_error  <= '0;
-            address_lsb_transmission_error  <= '0;
-            data_byte_transmission_error    <= '0;
+            address_msb_transmission_error      <= '0;
+            address_lsb_transmission_error      <= '0;
+            address_reg_msb_transmission_error  <= '0;
+            address_reg_lsb_transmission_error  <= '0;
 
             if((state == SEND_ADDR_MSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
                 address_msb_transmission_error  <= '1;
@@ -648,11 +721,15 @@ begin
                 address_lsb_transmission_error  <= '1;
             end
 
-            if((state == SEND_DATA_BYTE) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
-                data_byte_transmission_error    <= '1;
+            if((state == SEND_REG_ADDR_MSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
+                address_lsb_transmission_error  <= '1;
+            end
+
+            if((state == SEND_REG_ADDR_LSB) && (!csr_ignore_nack_reg) && (clk_divider_generated_clk_neg) && (cnt_bits_sent == 8) && (i2c_sda_port_read == '1)) begin
+                address_lsb_transmission_error  <= '1;
             end
         end
 end
 //End of driving status and error flags section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-endmodule 
+endmodule
