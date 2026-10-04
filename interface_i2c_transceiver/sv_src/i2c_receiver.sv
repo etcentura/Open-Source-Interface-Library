@@ -509,11 +509,11 @@ begin
         begin
             if(state == SYNC_BY_SCL_NEG) begin
                 if (csr_use_max_width_addr_reg) begin
-                    address_to_send_msb     <= {5'b11110, csr_address_of_slave_reg[9:8], 1'b0};
+                    address_to_send_msb     <= {5'b11110, csr_address_of_slave_reg[9:8], 1'b1};
                     address_to_send_lsb     <= csr_address_of_slave_reg[7:0];
                 end
                 else begin
-                    address_to_send_msb     <= {csr_address_of_slave_reg[6:0], 1'b0};
+                    address_to_send_msb     <= {csr_address_of_slave_reg[6:0], 1'b1};
                 end
             end
             else if(state == SEND_ADDR_MSB)begin
