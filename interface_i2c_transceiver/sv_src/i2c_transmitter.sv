@@ -393,7 +393,7 @@ begin
                     if((state == SEND_ADDR_LSB) && (cnt_bits_sent == 1)) begin
                         fifo_read_request <= '1;
                     end
-                    else if((state == SEND_DATA_BYTE) && (cnt_bits_sent == 1))begin
+                    else if((state == SEND_DATA_BYTE) && (cnt_bits_sent == 1) && (cnt_bytes_sent != csr_tx_bytes_num_reg - 1))begin
                         fifo_read_request <= '1;
                     end
                 end
@@ -401,7 +401,7 @@ begin
                     if((state == SEND_ADDR_MSB) && (cnt_bits_sent == 1)) begin
                         fifo_read_request <= '1;
                     end
-                    else if((state == SEND_DATA_BYTE) && (cnt_bits_sent == 1))begin
+                    else if((state == SEND_DATA_BYTE) && (cnt_bits_sent == 1) && (cnt_bytes_sent != csr_tx_bytes_num_reg - 1))begin
                         fifo_read_request <= '1;
                     end
                 end
@@ -604,9 +604,9 @@ end
 always_comb
 begin
     case (state)
-        SEND_ADDR_MSB:      i2c_bus_direction = (cnt_bits_sent == 8) ? '0 : '1;
-        SEND_ADDR_LSB:      i2c_bus_direction = (cnt_bits_sent == 8) ? '0 : '1;
-        SEND_DATA_BYTE:     i2c_bus_direction = (cnt_bits_sent == 8) ? '0 : '1;
+        SEND_ADDR_MSB:      i2c_bus_direction = (cnt_bits_sent == 8) ? '1 : '0;
+        SEND_ADDR_LSB:      i2c_bus_direction = (cnt_bits_sent == 8) ? '1 : '0;
+        SEND_DATA_BYTE:     i2c_bus_direction = (cnt_bits_sent == 8) ? '1 : '0;
         default:            i2c_bus_direction = '0;
     endcase
 end

@@ -738,11 +738,11 @@ end
 always_comb
 begin
     case (state)
-        SEND_ADDR_MSB:      i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
-        SEND_ADDR_LSB:      i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
-        SEND_REG_ADDR_MSB:  i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
-        SEND_REG_ADDR_LSB:  i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
-        GET_DATA_BYTE:      i2c_bus_direction = (cnt_bits == 8) ? '1 : '0;
+        SEND_ADDR_MSB:      i2c_bus_direction = (cnt_bits == 8) ? '1 : '0;
+        SEND_ADDR_LSB:      i2c_bus_direction = (cnt_bits == 8) ? '1 : '0;
+        SEND_REG_ADDR_MSB:  i2c_bus_direction = (cnt_bits == 8) ? '1 : '0;
+        SEND_REG_ADDR_LSB:  i2c_bus_direction = (cnt_bits == 8) ? '1 : '0;
+        GET_DATA_BYTE:      i2c_bus_direction = (cnt_bits == 8) ? '0 : '1;
         default:            i2c_bus_direction = '0;
     endcase
 end

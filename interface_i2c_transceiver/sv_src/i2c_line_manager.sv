@@ -35,19 +35,19 @@ logic 	                i2c_muxed_read_data         ;
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of muxing clock section
-assign i2c_muxed_clock = (i2c_unit_selection) ? i2c_transmitter_clock : i2c_reciever_clock;
+assign i2c_muxed_clock = (i2c_unit_selection == 0) ? i2c_transmitter_clock : i2c_reciever_clock;
 //End of muxing clock section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of muxing bus direction section section
-assign i2c_muxed_bus_direction = (i2c_unit_selection) ? i2c_transmitter_bus_direction : i2c_reciever_bus_direction;
+assign i2c_muxed_bus_direction = (i2c_unit_selection == 0) ? i2c_transmitter_bus_direction : i2c_reciever_bus_direction;
 //End of muxing bus direction section section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //Begin of muxing write data section
-assign i2c_muxed_write_data = (i2c_unit_selection) ? i2c_transmitter_write_data : i2c_reciever_write_data;
+assign i2c_muxed_write_data = (i2c_unit_selection == 0) ? i2c_transmitter_write_data : i2c_reciever_write_data;
 //End of muxing write data section
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -55,7 +55,7 @@ assign i2c_muxed_write_data = (i2c_unit_selection) ? i2c_transmitter_write_data 
 //Begin of muxing read data section
 always_comb
 begin
-    if(i2c_unit_selection) begin
+    if(i2c_unit_selection == 0) begin
         i2c_transmitter_read_data = i2c_muxed_read_data;
         i2c_reciever_read_data = '1; //1 because even if something goes wrong this value will be recognized as nack
     end

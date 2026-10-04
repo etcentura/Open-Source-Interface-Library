@@ -1,7 +1,7 @@
 module i2c_tranceiver
 #
 (
-    parameter 	    int     CSR_WIDTH 	= 32,
+    parameter 	    int     CSR_WIDTH 	        =   32                  ,
     parameter		int     FIFO_TX_AWIDTH		=	8                   ,
     parameter		int     FIFO_TX_FIFO_STYLE  =	0                   ,   //0 - SCFIFO, 1 - DCFIFO
     parameter       int     FIFO_TX_SYNC_RSTN   =   0                   ,   //0 - async reset, 1 - synced to both write and read separately
